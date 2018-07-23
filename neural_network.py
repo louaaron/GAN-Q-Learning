@@ -13,3 +13,7 @@ class Model(object):
     @property
     def sess(self):
         pass
+
+    @property
+    def random_seed(self):
+        pass
