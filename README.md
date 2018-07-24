@@ -1,1 +1,1 @@
-This code is currently under development but implements the algorithm found in https://arxiv.org/abs/1805.04874. 
+This code implements the "GAN Q-Learning" algorithm found in https://arxiv.org/abs/1805.04874. 

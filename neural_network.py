@@ -1,6 +1,3 @@
-import tensorflow as tf
-import numpy as np 
-
 class generator(object):
     """
     Interface for a generator. The generator should take in
