@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 import utils
 import gym
-import neural_network
 
 def learn(env,
           sess,
@@ -47,12 +46,12 @@ def learn(env,
         learning_rate (float - 0.0005) :
             The learning rate
         optimizer (tf.train.Optimizer - tf.train.RMSPropOptimizer) :
-            The optimization object
+            The optimization initialization function
         n_dis (int - 1) :
             The number of discriminator updates per episode
         n_gen (int - 1) :
             The number of generator updates per episode
-        lambda_ (float - 10) : 
+        lambda_ (float - 10) :
             The gradient penalty coefficient (0 for WGAN optimization)
         batch_size (int - 64) :
             The batch_size for training
@@ -72,8 +71,8 @@ def learn(env,
     #The generator-discriminator for loss function
     gen_dis = dis_copy(sess, dis, tf.reduce_max(gen.output))
 
-    #optimizations
-    optim = optimizer(learning_rate)
+    #optimization 
+    optim = optimizer(learning_rate=learning_rate)
 
     #loss functions
     dis_loss = tf.reduce_mean(tf.squeeze(
@@ -130,7 +129,7 @@ def learn(env,
                 epsilons = np.random.uniform(0, 1, batch_size)
                 predict_x = []
                 for i in range(batch_size):
-                    predict_x.append(epsilons[i] * batch_y[i] + (1 - epsilons[i]) * np.max(sess.run(gen.output, 
+                    predict_x.append(epsilons[i] * batch_y[i] + (1 - epsilons[i]) * np.max(sess.run(gen.output,
                     feed_dict={
                         gen.input_state : next_obs_batch[i],
                         gen.input_seed : batch_z[i]
