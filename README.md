@@ -2,6 +2,6 @@ This code implements the "GAN Q-Learning" algorithm found in https://arxiv.org/a
 
 ## TODO 
 
-Example architectures
+- [x] Example architectures 
 
 Example results
