@@ -4,4 +4,4 @@ This code implements the "GAN Q-Learning" algorithm found in https://arxiv.org/a
 
 - [x] Example architectures 
 
-Example results
+- [] Example results
