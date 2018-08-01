@@ -22,7 +22,7 @@ def learn(env,
     GAN Q-Learning learns a probaility distrubtion for Z(s, a), the distributional
     value function (Q(s, a) is the case when the distrubtion is singular).
 
-    Note that the algorithm described in figure 1 or the paper has some typos, which 
+    Note that the algorithm described in figure 1 or the paper has some typos, which
     are corrected here.
 
     Args
@@ -37,11 +37,11 @@ def learn(env,
             The size of the buffer
         reward_discount (float) :
             The amount of future reward to consider
-        dis (neural_network.discriminator) :
+        dis (neural_network.Discriminator) :
             The architecture of the discriminator
-        dis_copy (neural_network.discriminator_copy) :
+        dis_copy (neural_network.Discriminator_copy) :
             The architecture of the discriminator copier
-        gen (neural_network.generator) :
+        gen (neural_network.Generator) :
             The architecure of the generator
         learning_rate (float - 0.0005) :
             The learning rate

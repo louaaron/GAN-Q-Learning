@@ -1,4 +1,4 @@
-class generator(object):
+class Generator(object):
     """
     Interface for a generator. The generator should take in
     a state and random seed and outputs a reward distrbution
@@ -60,7 +60,7 @@ class generator(object):
         """
         pass
 
-class discriminator(object):
+class Discriminator(object):
     """
     Interface for a discriminator. The discriminator should take in
     a state, action, and expected reward and return a probability
@@ -133,7 +133,7 @@ class discriminator(object):
         """
         pass
 
-class discriminator_copy(object):
+class Discriminator_copy(object):
     """
     Interface for copying a discriminator (used for Loss function).
     The discriminator_copy object should be initialized by a discriminator
@@ -148,8 +148,8 @@ class discriminator_copy(object):
 
         Args
         ----
-            dis: A discriminator object
-            new_rew_input : a new reward input.
+            dis (Discriminator) : The discriminator to copy
+            new_rew_input (tf.placeholder) : a new reward input.
         """
         pass
 
