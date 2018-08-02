@@ -16,7 +16,8 @@ def learn(env,
           n_dis=1,
           n_gen=1,
           lambda_=10,
-          batch_size=64):
+          batch_size=64,
+          log_dir=None):
     """
     Code for the algorithm found in https://arxiv.org/abs/1805.04874
     GAN Q-Learning learns a probaility distrubtion for Z(s, a), the distributional
@@ -55,6 +56,8 @@ def learn(env,
             The gradient penalty coefficient (0 for WGAN optimization)
         batch_size (int - 64) :
             The batch_size for training
+        log_dir (str - None) :
+            writer output directory if not None
     """
 
     #Assertion statements (make sure session remains the same across graphs)
@@ -71,17 +74,25 @@ def learn(env,
     #The generator-discriminator for loss function
     gen_dis = dis_copy(sess, dis, tf.reduce_max(gen.output))
 
-    #optimization 
+    #optimization
     optim = optimizer(learning_rate=learning_rate)
 
     #loss functions
     dis_loss = tf.reduce_mean(tf.squeeze(
-        dis - gen_dis + lambda_ * tf.square(tf.gradients(grad_dis.output, grad_val_ph)[0] - 1)
+        gen_dis - dis + lambda_ * tf.square(tf.gradients(grad_dis.output, grad_val_ph)[0] - 1)
     ))
     gen_loss = tf.reduce_mean(-tf.squeeze(gen_dis))
 
     #buffer
     buffer = utils.ReplayBuffer(buffer_size, 1)
+
+    #writer (optional)
+    if log_dir is not None:
+        writer = tf.summary.FileWriter(log_dir)
+        dis_loss = tf.summary.scalar('discriminator loss', dis_loss)
+        gen_loss = tf.summary.scalar('generator loss', gen_loss)
+    else:
+        writer = None
 
     #training algorithm
 
@@ -129,11 +140,10 @@ def learn(env,
                 epsilons = np.random.uniform(0, 1, batch_size)
                 predict_x = []
                 for i in range(batch_size):
-                    predict_x.append(epsilons[i] * batch_y[i] + (1 - epsilons[i]) * np.max(sess.run(gen.output,
-                    feed_dict={
-                        gen.input_state : next_obs_batch[i],
-                        gen.input_seed : batch_z[i]
-                    })))
+                    predict_x.append(epsilons[i] * batch_y[i] + (1 - epsilons[i]) *
+                                     np.max(sess.run(gen.output, feed_dict={
+                                       gen.input_state : next_obs_batch[i],
+                                       gen.input_seed : batch_z[i]})))
                 predict_x = np.array(predict_x)
 
                 sess.run(optim.minimize(dis_loss, var_list=dis.trainable_variables), feed_dict={
