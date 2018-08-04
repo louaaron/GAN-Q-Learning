@@ -59,6 +59,7 @@ def learn(env,
         log_dir (str - None) :
             writer output directory if not None
     """
+    z_shape = gen.input_seed.get_shape().as_list()[1:]
 
     #Assertion statements (make sure session remains the same across graphs)
     assert sess == dis.sess
@@ -68,20 +69,22 @@ def learn(env,
     last_obs = env.reset()
 
     #The gradient for loss function
-    grad_val_ph = tf.placeholder(tf.float32, shape=dis.input.get_shape())
-    grad_dis = dis_copy(sess, dis, grad_val_ph)
+    grad_val_ph = tf.placeholder(tf.float32, shape=dis.input_reward.get_shape())
+    grad_dis = dis_copy(dis, grad_val_ph)
 
     #The generator-discriminator for loss function
-    gen_dis = dis_copy(sess, dis, tf.reduce_max(gen.output))
-
-    #optimization
-    optim = optimizer(learning_rate=learning_rate)
+    gen_dis = dis_copy(dis, tf.reduce_max(gen.output, axis=1))
 
     #loss functions
     dis_loss = tf.reduce_mean(tf.squeeze(
-        gen_dis - dis + lambda_ * tf.square(tf.gradients(grad_dis.output, grad_val_ph)[0] - 1)
+        gen_dis.output - dis.output + lambda_ * tf.square(tf.gradients(grad_dis.output, grad_val_ph)[0] - 1)
     ))
-    gen_loss = tf.reduce_mean(-tf.squeeze(gen_dis))
+    gen_loss = tf.reduce_mean(-tf.squeeze(gen_dis.output))
+
+    #optimization
+    optim = optimizer(learning_rate=learning_rate)
+    dis_min_op = optim.minimize(dis_loss, var_list=dis.trainable_variables)
+    gen_min_op = optim.minimize(gen_loss, var_list=gen.trainable_variables)
 
     #buffer
     buffer = utils.ReplayBuffer(buffer_size, 1)
@@ -89,29 +92,46 @@ def learn(env,
     #writer (optional)
     if log_dir is not None:
         writer = tf.summary.FileWriter(log_dir)
-        dis_loss = tf.summary.scalar('discriminator loss', dis_loss)
-        gen_loss = tf.summary.scalar('generator loss', gen_loss)
+        dis_summ = tf.summary.scalar('discriminator loss', dis_loss)
+        gen_summ = tf.summary.scalar('generator loss', gen_loss)
+        rew_ph = tf.placeholder(tf.int32, shape=())
+        rew_summ = tf.summary.scalar('average reward', rew_ph)
     else:
         writer = None
 
+    #initialize all vars
+    sess.run(tf.global_variables_initializer())
+
     #training algorithm
+
+    #trackers for writer
+    rew_tracker = 0
+    dis_tracker = 0
+    gen_tracker = 0
 
     #number of episodes to train
     for _ in range(episodes):
         #loop through all the steps
+        rew_agg = 0
         for _ in range(env._max_episode_steps):
-            gen_seed = np.random.normal(0, 1)
+            gen_seed = np.random.normal(0, 1, size=z_shape)
             action_results = sess.run(gen.output, feed_dict={
                 gen.input_state : np.array([last_obs]), 
                 gen.input_seed : np.array([gen_seed])
             })[0]
-            optimal_action = np.amax(action_results)
+            optimal_action = np.argmax(action_results)
 
             next_obs, reward, done, _ = env.step(optimal_action)
+            rew_agg += reward
             idx = buffer.store_frame(last_obs)
             buffer.store_effect(idx, optimal_action, reward, done)
 
             if done:
+                if writer is not None:
+                    rew_writer = sess.run(rew_summ, feed_dict={rew_ph : rew_agg})
+                    writer.add_summary(rew_writer, rew_tracker)
+                    rew_tracker += 1
+                    rew_agg = 0
                 last_obs = env.reset()
             else:
                 last_obs = next_obs
@@ -120,19 +140,19 @@ def learn(env,
                 continue
 
             #update discriminator n_dis times
-            for _ in range(n_dis):
+            for x in range(n_dis):
                 obs_batch, act_batch, rew_batch, next_obs_batch, done_batch = (
                     buffer.sample(batch_size)
                 )
-                batch_z = np.random.normal(0, 1, size=[batch_size])
+                batch_z = np.random.normal(0, 1, size=[batch_size] + z_shape)
                 batch_y = []
                 for i in range(batch_size):
                     if done_batch[i]:
                         batch_y.append(rew_batch[i])
                     else:
                         expected_ar = sess.run(gen.output, feed_dict={
-                            gen.input_state : obs_batch[i],
-                            gen.input_seed: batch_z[i]
+                            gen.input_state : np.array([obs_batch[i]]),
+                            gen.input_seed: np.array([batch_z[i]])
                         })
                         future_reward = np.max(expected_ar)
                         batch_y.append(rew_batch[i] + reward_discount * future_reward)
@@ -142,11 +162,12 @@ def learn(env,
                 for i in range(batch_size):
                     predict_x.append(epsilons[i] * batch_y[i] + (1 - epsilons[i]) *
                                      np.max(sess.run(gen.output, feed_dict={
-                                       gen.input_state : next_obs_batch[i],
-                                       gen.input_seed : batch_z[i]})))
+                                         gen.input_state : np.array([obs_batch[i]]),
+                                         gen.input_seed : np.array([batch_z[i]])})))
                 predict_x = np.array(predict_x)
+                act_batch = np.expand_dims(act_batch, -1)
 
-                sess.run(optim.minimize(dis_loss, var_list=dis.trainable_variables), feed_dict={
+                sess.run(dis_min_op, feed_dict={
                     gen.input_seed : batch_z,
                     gen.input_state : obs_batch,
                     gen_dis.input_state : obs_batch,
@@ -159,13 +180,40 @@ def learn(env,
                     grad_val_ph : predict_x
                 })
 
+                if writer is not None:
+                    dis_writer = sess.run(dis_summ, feed_dict={
+                        gen.input_seed : batch_z,
+                        gen.input_state : obs_batch,
+                        gen_dis.input_state : obs_batch,
+                        gen_dis.input_action : act_batch,
+                        dis.input_reward : batch_y,
+                        dis.input_state : obs_batch,
+                        dis.input_action : act_batch,
+                        grad_dis.input_state : obs_batch,
+                        grad_dis.input_action : act_batch,
+                        grad_val_ph : predict_x
+                    })
+                    writer.add_summary(dis_writer, dis_tracker)
+                    dis_tracker += 1
+
             #update the generator n_gen times
             for _ in range(n_gen):
                 obs_batch, act_batch, _, _, _ = (buffer.sample(batch_size))
-                batch_z = np.random.normal(0, 1, size=[batch_size])   
-                sess.run(optim.minimize(gen_loss, var_list=gen.trainable_variables), feed_dict={
+                batch_z = np.random.normal(0, 1, size=[batch_size] + z_shape)   
+                act_batch = np.expand_dims(act_batch, -1)
+                sess.run(gen_min_op, feed_dict={
                     gen.input_seed : batch_z,
                     gen.input_state : obs_batch,
                     gen_dis.input_state : obs_batch,
                     gen_dis.input_action: act_batch
                 })
+
+                if writer is not None:
+                    gen_writer = sess.run(gen_summ, feed_dict={
+                        gen.input_seed : batch_z,
+                        gen.input_state : obs_batch,
+                        gen_dis.input_state : obs_batch,
+                        gen_dis.input_action: act_batch
+                    })
+                    writer.add_summary(gen_writer, gen_tracker)
+                    gen_tracker += 1
