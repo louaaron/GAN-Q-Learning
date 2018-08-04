@@ -15,7 +15,7 @@ def learn(env,
           optimizer=tf.train.RMSPropOptimizer,
           n_dis=1,
           n_gen=1,
-          lambda_=10,
+          lambda_=0,
           batch_size=64,
           log_dir=None):
     """
@@ -52,7 +52,7 @@ def learn(env,
             The number of discriminator updates per episode
         n_gen (int - 1) :
             The number of generator updates per episode
-        lambda_ (float - 10) :
+        lambda_ (float - 0) :
             The gradient penalty coefficient (0 for WGAN optimization)
         batch_size (int - 64) :
             The batch_size for training
@@ -76,9 +76,9 @@ def learn(env,
     gen_dis = dis_copy(dis, tf.reduce_max(gen.output, axis=1))
 
     #loss functions
-    dis_loss = tf.reduce_mean(tf.squeeze(
-        gen_dis.output - dis.output + lambda_ * tf.square(tf.gradients(grad_dis.output, grad_val_ph)[0] - 1)
-    ))
+    dis_loss = tf.reduce_mean(tf.squeeze(gen_dis.output)) - tf.reduce_mean(tf.squeeze(dis.output)) \
+            + lambda_ * tf.reduce_mean(tf.square(tf.gradients(grad_dis.output, grad_val_ph)[0] - 1))
+
     gen_loss = tf.reduce_mean(-tf.squeeze(gen_dis.output))
 
     #optimization
@@ -140,7 +140,7 @@ def learn(env,
                 continue
 
             #update discriminator n_dis times
-            for x in range(n_dis):
+            for _ in range(n_dis):
                 obs_batch, act_batch, rew_batch, next_obs_batch, done_batch = (
                     buffer.sample(batch_size)
                 )

@@ -12,13 +12,13 @@ def main():
     env = gym.make('CartPole-v0')
     train.learn(env, 
                 sess, 
-                10000,
+                1000,
                 10000, 
                 0.99, 
                 dis, 
                 dis_copy, 
                 gen,
-                n_gen=2,
+                n_gen=5,
                 log_dir='./logs/')
 
 if __name__ == '__main__' : main()
