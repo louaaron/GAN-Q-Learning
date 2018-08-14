@@ -109,6 +109,10 @@ def learn(env,
     dis_tracker = 0
     gen_tracker = 0
 
+    #debug print
+    print(dis.trainable_variables)
+    print(gen.trainable_variables)
+
     #number of episodes to train
     for _ in range(episodes):
         #loop through all the steps
@@ -116,7 +120,7 @@ def learn(env,
         for _ in range(env._max_episode_steps):
             gen_seed = np.random.normal(0, 1, size=z_shape)
             action_results = sess.run(gen.output, feed_dict={
-                gen.input_state : np.array([last_obs]), 
+                gen.input_state : np.array([last_obs]),
                 gen.input_seed : np.array([gen_seed])
             })[0]
             optimal_action = np.argmax(action_results)

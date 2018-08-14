@@ -93,7 +93,7 @@ class Discriminator(nn.Discriminator):
             self.input_action_ = tf.placeholder(tf.float32, shape=[None, 1], name='input_action')
             self.input_reward_exp = tf.expand_dims(self.input_reward_, axis=-1, name='input_reward_expanded')
             self.concat = tf.concat([self.input_state_, self.input_reward_exp, self.input_action_], axis=1, name='concat')
-            self.hidden = tf.layers.dense(self.concat, 8, activation=tf.nn.relu, name='hidden')
+            self.hidden = tf.layers.dense(self.concat, 128, activation=tf.nn.relu, name='hidden')
             self.output_ = tf.layers.dense(self.hidden, 1, activation=tf.sigmoid, name='output')
         self.sess.run(tf.global_variables_initializer())
 

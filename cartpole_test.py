@@ -10,13 +10,13 @@ def main():
     dis_copy = networks.Discriminator_copy
 
     env = gym.make('CartPole-v0')
-    train.learn(env, 
-                sess, 
+    train.learn(env,
+                sess,
                 1000,
                 10000, 
                 0.99, 
-                dis, 
-                dis_copy, 
+                dis,
+                dis_copy,
                 gen,
                 n_gen=5,
                 log_dir='./logs/')
