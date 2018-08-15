@@ -15,9 +15,9 @@ class Generator(nn.Generator):
         self.sess_ = sess
         with tf.variable_scope('gen'):
             self.input_state_ = tf.placeholder(tf.float32, shape=[None, 4], name='input_state')
-            self.input_seed_ = tf.placeholder(tf.float32, shape=[None, 10], name='input_seed')
+            self.input_seed_ = tf.placeholder(tf.float32, shape=[None, 1], name='input_seed')
             self.concat = tf.concat([self.input_state_, self.input_seed_], 1, name='concat')
-            self.hidden = tf.layers.dense(self.concat, 128, activation=tf.nn.relu, name='hidden')
+            self.hidden = tf.layers.dense(self.concat, 8, activation=tf.nn.relu, name='hidden')
             self.output_ = tf.layers.dense(self.hidden, 2, name='output')
         self.sess.run(tf.global_variables_initializer())
 
@@ -93,7 +93,7 @@ class Discriminator(nn.Discriminator):
             self.input_action_ = tf.placeholder(tf.float32, shape=[None, 1], name='input_action')
             self.input_reward_exp = tf.expand_dims(self.input_reward_, axis=-1, name='input_reward_expanded')
             self.concat = tf.concat([self.input_state_, self.input_reward_exp, self.input_action_], axis=1, name='concat')
-            self.hidden = tf.layers.dense(self.concat, 128, activation=tf.nn.relu, name='hidden')
+            self.hidden = tf.layers.dense(self.concat, 8, activation=tf.nn.relu, name='hidden')
             self.output_ = tf.layers.dense(self.hidden, 1, activation=tf.sigmoid, name='output')
         self.sess.run(tf.global_variables_initializer())
 
