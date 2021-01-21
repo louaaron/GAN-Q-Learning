@@ -10,4 +10,4 @@ This code implements the "GAN Q-Learning" algorithm found in https://arxiv.org/a
 
 ## Final Results
 
-In the end, I was unable to reproduce the results given in the paper. After verifying that the algorithm is correct, I found that the classic problems of training GANs arose. In particular, the discriminator easily overfit the reward distribution, meaning that the generator got stuck and the reward function couldn't learn. Even with significant artchitecture modifications, these problems persisted.
+In the end, I was unable to reproduce the results given in the paper since my computer couldn't sweep enough hyperparameters. After verifying that the algorithm is correct, I found that the classic problems of training GANs arose. In particular, the discriminator easily overfit the reward distribution, meaning that the generator got stuck and the reward function couldn't learn. Even with significant artchitecture modifications, these problems persisted.
